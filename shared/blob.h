@@ -20,7 +20,7 @@ typedef struct
     char name[PART_NAME_LEN];
     unsigned int offset;
     unsigned int size;
-    unsigned char unknown[4]; // Seems to always be 1.
+    unsigned int unknown; // Seems to always be 1.
 } part_type;
 
 #endif /* _BLOB_H*/
