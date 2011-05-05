@@ -3,7 +3,7 @@ DEPS = Makefile shared/blob.h
 COMMON=
 
 CC=gcc
-CFLAGS=-I. -Ishared -Wall -ggdb
+CFLAGS+=-I. -Ishared -Wall -ggdb
 LDFLAGS=
 
 OBJS	= $(COMMON) $(addsuffix .o, $(TARGETS))

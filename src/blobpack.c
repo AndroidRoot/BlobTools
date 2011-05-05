@@ -18,7 +18,7 @@ main (int argc, char **argv)
   header_type hdr;
   memset (&hdr, 0, sizeof (header_type));
 
-  if (argc < 5)
+  if (argc < 4)
     {
       fprintf (stderr,"Usage: %s <headerfile> <outfile> <partitionname:partitionfile> ...\n", argv[0]);
       fprintf(stderr, "Any number of partitionname:partitionfilename entries can be entered\n");
