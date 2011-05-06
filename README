@@ -1,0 +1,8 @@
+Tools used for unpacking and repacking blob files.
+
+The tools should be fairly selfexplanatory, but keep in mind there's very little error checking, so if it crashes, don't flash the blob ;)
+
+Patches are welcome! Especially ones that make the code prettier or better error handling
+
+Thanks,
+RaYmAn
