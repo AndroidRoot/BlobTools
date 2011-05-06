@@ -18,27 +18,33 @@ main (int argc, char **argv)
   header_type hdr;
   memset (&hdr, 0, sizeof (header_type));
 
-  if (argc < 4)
+  if (argc < (GENERIC_ARGS+2)) // Require at least one partition
     {
-      fprintf (stderr,"Usage: %s <headerfile> <outfile> <partitionname:partitionfile> ...\n", argv[0]);
-      fprintf(stderr, "Any number of partitionname:partitionfilename entries can be entered\n");
-      return 0;
+      fprintf (stderr,"Usage: %s <headerfile> <outfile> <partitionname> <partitionfile> ...\n", argv[0]);
+      fprintf(stderr, "Any number of partitionname partitionfilename entries can be entered\n");
+      return -1;
     }
   char *headername = argv[1];
   char *outname = argv[2];
   int i;
   int partnums = argc - GENERIC_ARGS; 
+
+  if(partnums <= 0 || partnums % 2 != 0)
+  {
+    fprintf(stderr, "Error in parameters. There needs to be equal partition names and partition filenames.");
+    return -1;
+  }
+  // Two parameters per partition. 
+  // At this point we know there is a dividable-by-two number of parameters left
+  partnums = partnums / 2;
   printf("Found %d partitions as commandline arguments\n", partnums);
   partition_item *partitions = calloc(partnums, sizeof(partition_item));
   partition_item *curr_part = partitions;
-  for(i=GENERIC_ARGS; i<argc; i++)
+  for(i=GENERIC_ARGS; i<argc; i+=2)
   {
-    char *fname = strstr(argv[i], ":");
-    fname[0] = '\0';
-    fname++;
-    printf("Partname: %s Filename: %s\n", argv[i], fname);
+    printf("Partname: %s Filename: %s\n", argv[i], argv[i+1]);
     curr_part->part_name = argv[i];
-    curr_part->filename = fname;
+    curr_part->filename = argv[i+1];
     curr_part++;
   };
 
