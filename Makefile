@@ -2,7 +2,7 @@ TARGETS=blobunpack blobpack
 DEPS = Makefile shared/blob.h
 COMMON=
 
-CC=gcc
+CC=g++
 CFLAGS+=-I. -Ishared -Wall -ggdb
 LDFLAGS=
 
@@ -13,7 +13,7 @@ all: $(TARGETS)
 $(TARGETS): %: %.o $(COMMON) $(DEPS)
 	$(CC) $(CFLAGS) -o $@ $< $(COMMON) $(LDFLAGS)
 
-$(OBJS): %.o: src/%.c $(DEPS)
+$(OBJS): %.o: src/%.cpp $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 .PHONY: clean

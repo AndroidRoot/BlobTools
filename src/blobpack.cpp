@@ -16,7 +16,14 @@ int
 main (int argc, char **argv)
 {
   header_type hdr;
+  char *headername,*outname;
+  int i, partnums;
+  partition_item *partitions,*curr_part;
+  FILE *hdrfil, *outfile;
+  part_type *parts;
+
   memset (&hdr, 0, sizeof (header_type));
+
 
   if (argc < (GENERIC_ARGS+2)) // Require at least one partition
     {
@@ -24,10 +31,10 @@ main (int argc, char **argv)
       fprintf(stderr, "Any number of partitionname partitionfilename entries can be entered\n");
       return -1;
     }
-  char *headername = argv[1];
-  char *outname = argv[2];
-  int i;
-  int partnums = argc - GENERIC_ARGS; 
+
+  headername = argv[1];
+  outname = argv[2];
+  partnums = argc - GENERIC_ARGS; 
 
   if(partnums <= 0 || partnums % 2 != 0)
   {
@@ -38,8 +45,8 @@ main (int argc, char **argv)
   // At this point we know there is a dividable-by-two number of parameters left
   partnums = partnums / 2;
   printf("Found %d partitions as commandline arguments\n", partnums);
-  partition_item *partitions = calloc(partnums, sizeof(partition_item));
-  partition_item *curr_part = partitions;
+  partitions = (partition_item*)calloc(partnums, sizeof(partition_item));
+  curr_part = partitions;
   for(i=GENERIC_ARGS; i<argc; i+=2)
   {
     printf("Partname: %s Filename: %s\n", argv[i], argv[i+1]);
@@ -48,11 +55,11 @@ main (int argc, char **argv)
     curr_part++;
   };
 
-  FILE *hdrfil = fopen (headername, "r");
+  hdrfil = fopen (headername, "rb");
   fread (&hdr, sizeof (header_type), 1, hdrfil);
   fclose(hdrfil);
   hdrfil = NULL;
-  FILE *outfile = fopen (outname, "w");
+  outfile = fopen (outname, "wb");
   hdr.num_parts = partnums;
   fwrite (&hdr, sizeof (header_type), 1, outfile);
   if (!memcmp (hdr.magic, MAGIC, MAGIC_SIZE))
@@ -63,23 +70,25 @@ main (int argc, char **argv)
   printf ("%d partitions starting at offset 0x%X\n", hdr.num_parts,
 	  hdr.part_offset);
 
-  part_type *parts = calloc (hdr.num_parts, sizeof (part_type));
+  parts = (part_type *)calloc (hdr.num_parts, sizeof (part_type));
   memset(parts, 0, sizeof(part_type)*hdr.num_parts);
-  int currentOffset = sizeof(header_type)+sizeof(part_type)*hdr.num_parts; // Is this right? maybe +1
+  int currentOffset = sizeof(header_type)+sizeof(part_type)*hdr.num_parts;
   printf("Offset: %d\n", currentOffset);
   for (i = 0; i < hdr.num_parts; i++)
-    {
+  {
+	  FILE *curfile = fopen (partitions[i].filename, "rb");
+      long fsize;
       memcpy(parts[i].name, partitions[i].part_name, PART_NAME_LEN);
       parts[i].unknown = 1; // No idea, but seems to always be 1...
       parts[i].offset = currentOffset;
-      FILE *curfile = fopen (partitions[i].filename, "r");
+      
       if(curfile == NULL)
       {
         fprintf(stderr,"Error opening file %s\n", partitions[i].filename);
         return 0;
       }
       fseek (curfile, 0, SEEK_END);
-      long fsize = ftell (curfile);
+      fsize = ftell (curfile);
       fclose (curfile);
       parts[i].size = fsize;
       currentOffset += fsize;
@@ -89,7 +98,7 @@ main (int argc, char **argv)
   for (i = 0; i < hdr.num_parts; i++)
     {
       char *buffer = (char *) malloc (parts[i].size);
-      FILE *currFile = fopen (partitions[i].filename, "r");	// Read in update file
+      FILE *currFile = fopen (partitions[i].filename, "rb");	// Read in update file
       fread (buffer, 1, parts[i].size, currFile);
       fclose(currFile);
       fwrite (buffer, 1, parts[i].size, outfile);

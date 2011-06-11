@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "blob.h"
-
+#ifdef _WIN32
+#define snprintf _snprintf
+#endif
 void dumpPartition (FILE * file, char *basename, part_type part);
 #define BUFFER_SIZE 2048
 
@@ -10,6 +12,10 @@ int
 main (int argc, char **argv)
 {
   header_type hdr;
+  FILE *file,*hdrfile;
+  char hdrfilename[1024];
+  part_type *parts;
+
   memset (&hdr, 0, sizeof (header_type));
 
   if (argc < 2)
@@ -18,7 +24,7 @@ main (int argc, char **argv)
       return -1;
     }
 
-  FILE *file = fopen (argv[1], "r");
+  file = fopen (argv[1], "rb");
   if (file == NULL)
     {
       fprintf (stderr, "Unable to open \"%s\"\n", argv[1]);
@@ -34,15 +40,15 @@ main (int argc, char **argv)
   printf ("%d partitions starting at offset 0x%X\n", hdr.num_parts,
 	  hdr.part_offset);
 
-  char hdrfilename[1024];
+  
   snprintf (hdrfilename, 1024, "%s.HEADER", argv[1]);
-  FILE *hdrfile = fopen (hdrfilename, "w");
+  hdrfile = fopen (hdrfilename, "wb");
   fwrite (&hdr, sizeof (header_type), 1, hdrfile);
   fclose (hdrfile);
 
 
   fseek (file, hdr.part_offset, SEEK_SET);
-  part_type *parts = calloc (hdr.num_parts, sizeof (part_type));
+  parts = (part_type *)calloc (hdr.num_parts, sizeof (part_type));
   fread (parts, sizeof (part_type), hdr.num_parts, file);
   int i;
   for (i = 0; i < hdr.num_parts; i++)
@@ -64,16 +70,18 @@ dumpPartition (FILE * file, char *basename, part_type part)
   int dataleft = part.size;
   char buffer[BUFFER_SIZE];
   char filename[1024];
+  FILE *outfile;
   snprintf (filename, 1024, "%s.%s", basename, part.name);
   printf ("Writing file %s (%d bytes)\n", filename, part.size);
-  FILE *outfile = fopen (filename, "w");
+  outfile = fopen (filename, "wb");
+
   while (dataleft > 0)
     {
       int toRead = dataleft > BUFFER_SIZE ? BUFFER_SIZE : dataleft;
       int dataread = fread (buffer, 1, toRead, file);
       int datawritten = fwrite (buffer, 1, dataread, outfile);
       if (dataread != datawritten)
-	abort ();
+		abort ();
       dataleft -= dataread;
     }
   fclose (outfile);
