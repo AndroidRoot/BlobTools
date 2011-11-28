@@ -15,6 +15,7 @@ main (int argc, char **argv)
   FILE *file,*hdrfile;
   char hdrfilename[1024];
   part_type *parts;
+  int i;
 
   memset (&hdr, 0, sizeof (header_type));
 
@@ -39,18 +40,22 @@ main (int argc, char **argv)
   printf ("Header size: %d\n", hdr.size);
   printf ("%d partitions starting at offset 0x%X\n", hdr.num_parts,
 	  hdr.part_offset);
-
+  printf ("Blob version: %d\n", hdr.version);
+  for(i=0; i<7; i++)
+  {
+    printf ("Blob 'unknown' %d: %d\n", i, hdr.unknown[i]);
+  }
   
-  snprintf (hdrfilename, 1024, "%s.HEADER", argv[1]);
+/*  snprintf (hdrfilename, 1024, "%s.HEADER", argv[1]);
   hdrfile = fopen (hdrfilename, "wb");
   fwrite (&hdr, sizeof (header_type), 1, hdrfile);
-  fclose (hdrfile);
+  fclose (hdrfile);*/
 
 
   fseek (file, hdr.part_offset, SEEK_SET);
   parts = (part_type *)calloc (hdr.num_parts, sizeof (part_type));
   fread (parts, sizeof (part_type), hdr.num_parts, file);
-  int i;
+
   for (i = 0; i < hdr.num_parts; i++)
     {
       printf ("Partition %d\n", i);

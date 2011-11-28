@@ -10,30 +10,28 @@ typedef struct
 } partition_item;
 
 // Number of required arguments before partition definition, including argv[0]
-#define GENERIC_ARGS 3
+#define GENERIC_ARGS 2
 
 int
 main (int argc, char **argv)
 {
   header_type hdr;
-  char *headername,*outname;
+  char *outname;
   int i, partnums;
   partition_item *partitions,*curr_part;
-  FILE *hdrfil, *outfile;
+  FILE *outfile;
   part_type *parts;
 
   memset (&hdr, 0, sizeof (header_type));
 
-
   if (argc < (GENERIC_ARGS+2)) // Require at least one partition
     {
-      fprintf (stderr,"Usage: %s <headerfile> <outfile> <partitionname> <partitionfile> ...\n", argv[0]);
+      fprintf (stderr,"Usage: %s <outfile> <partitionname> <partitionfile> ...\n", argv[0]);
       fprintf(stderr, "Any number of partitionname partitionfilename entries can be entered\n");
       return -1;
     }
 
-  headername = argv[1];
-  outname = argv[2];
+  outname = argv[1];
   partnums = argc - GENERIC_ARGS; 
 
   if(partnums <= 0 || partnums % 2 != 0)
@@ -55,17 +53,13 @@ main (int argc, char **argv)
     curr_part++;
   };
 
-  hdrfil = fopen (headername, "rb");
-  fread (&hdr, sizeof (header_type), 1, hdrfil);
-  fclose(hdrfil);
-  hdrfil = NULL;
-  outfile = fopen (outname, "wb");
+  memcpy(hdr.magic, MAGIC, MAGIC_SIZE);
+  hdr.version = 0x00010000; // Taken from 
+  hdr.size = hdr.part_offset = sizeof(header_type);
   hdr.num_parts = partnums;
+
+  outfile = fopen (outname, "wb");
   fwrite (&hdr, sizeof (header_type), 1, outfile);
-  if (!memcmp (hdr.magic, MAGIC, MAGIC_SIZE))
-    {
-      printf ("Correct header\n");
-    }
   printf ("Size: %d\n", hdr.size);
   printf ("%d partitions starting at offset 0x%X\n", hdr.num_parts,
 	  hdr.part_offset);
@@ -74,12 +68,12 @@ main (int argc, char **argv)
   memset(parts, 0, sizeof(part_type)*hdr.num_parts);
   int currentOffset = sizeof(header_type)+sizeof(part_type)*hdr.num_parts;
   printf("Offset: %d\n", currentOffset);
-  for (i = 0; i < hdr.num_parts; i++)
+  for (i = 0; i < (int)hdr.num_parts; i++)
   {
-	  FILE *curfile = fopen (partitions[i].filename, "rb");
+      FILE *curfile = fopen (partitions[i].filename, "rb");
       long fsize;
       memcpy(parts[i].name, partitions[i].part_name, PART_NAME_LEN);
-      parts[i].unknown = 1; // No idea, but seems to always be 1...
+      parts[i].version = 1; // Version. OK to stay at 1 always.
       parts[i].offset = currentOffset;
       
       if(curfile == NULL)
@@ -95,14 +89,15 @@ main (int argc, char **argv)
     }
 
   fwrite (parts, sizeof (part_type), hdr.num_parts, outfile);
-  for (i = 0; i < hdr.num_parts; i++)
-    {
-      char *buffer = (char *) malloc (parts[i].size);
-      FILE *currFile = fopen (partitions[i].filename, "rb");	// Read in update file
-      fread (buffer, 1, parts[i].size, currFile);
-      fclose(currFile);
-      fwrite (buffer, 1, parts[i].size, outfile);
-    };
+  for (i = 0; i < (int)hdr.num_parts; i++)
+  {
+    // TODO: Don't read in full file in one go. Memory usage!!!
+    char *buffer = (char *) malloc (parts[i].size);
+    FILE *currFile = fopen (partitions[i].filename, "rb");	// Read in update file
+    fread (buffer, 1, parts[i].size, currFile);
+    fclose(currFile);
+    fwrite (buffer, 1, parts[i].size, outfile);
+  };
 
   fclose (outfile);
   return 0;
