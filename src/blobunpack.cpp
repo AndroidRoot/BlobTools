@@ -12,8 +12,7 @@ int
 main (int argc, char **argv)
 {
   header_type hdr;
-  FILE *file,*hdrfile;
-  char hdrfilename[1024];
+  FILE *file;
   part_type *parts;
   int i;
 
@@ -56,7 +55,7 @@ main (int argc, char **argv)
   parts = (part_type *)calloc (hdr.num_parts, sizeof (part_type));
   fread (parts, sizeof (part_type), hdr.num_parts, file);
 
-  for (i = 0; i < hdr.num_parts; i++)
+  for (i = 0; i < (int)hdr.num_parts; i++)
     {
       printf ("Partition %d\n", i);
       printf ("Name: %s\n", parts[i].name);
