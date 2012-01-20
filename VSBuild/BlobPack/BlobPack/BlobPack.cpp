@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "targetver.h"
+
 #include "blob.h"
 
 typedef struct

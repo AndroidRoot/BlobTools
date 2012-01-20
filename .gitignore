@@ -1,3 +1,8 @@
 *.o
-blobpack
-blobunpack
+*.ilk
+*.manifest
+*.htm
+*.obj
+*.dep
+*.res
+vc90.*
