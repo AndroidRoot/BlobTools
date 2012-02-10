@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "blob.h"
+
 typedef struct
 {
   char *part_name;
@@ -24,16 +25,24 @@ main (int argc, char **argv)
 
   memset (&hdr, 0, sizeof (header_type));
 
-  if (argc < (GENERIC_ARGS+2)) // Require at least one partition
+  int nGenericArgs = GENERIC_ARGS;
+  bool bSignOffset = false;
+  if(0 == memcmp (argv[1], "-s", 2))
+  {
+    bSignOffset = true;
+	++nGenericArgs;
+  }
+
+  if (argc < (nGenericArgs+2)) // Require at least one partition
     {
-      fprintf (stderr,"Usage: %s <outfile> <partitionname> <partitionfile> ...\n", argv[0]);
+      fprintf (stderr,"Usage: %s <-s> <outfile> <partitionname> <partitionfile> ...\n", argv[0]);
       fprintf(stderr, "Any number of partitionname partitionfilename entries can be entered\n");
       return -1;
     }
 
-  outname = argv[1];
-  partnums = argc - GENERIC_ARGS; 
+  outname = argv[nGenericArgs-1];
 
+  partnums = argc - nGenericArgs; 
   if(partnums <= 0 || partnums % 2 != 0)
   {
     fprintf(stderr, "Error in parameters. There needs to be equal partition names and partition filenames.");
@@ -45,28 +54,35 @@ main (int argc, char **argv)
   printf("Found %d partitions as commandline arguments\n", partnums);
   partitions = (partition_item*)calloc(partnums, sizeof(partition_item));
   curr_part = partitions;
-  for(i=GENERIC_ARGS; i<argc; i+=2)
+  for(i=nGenericArgs; i<argc; i+=2)
   {
     printf("Partname: %s Filename: %s\n", argv[i], argv[i+1]);
     curr_part->part_name = argv[i];
     curr_part->filename = argv[i+1];
-    curr_part++;
+    ++curr_part;
   };
 
+  memcpy(hdr.signblob, SIGNBLOB, SIGNBLOB_SIZE);
   memcpy(hdr.magic, MAGIC, MAGIC_SIZE);
   hdr.version = 0x00010000; // Taken from 
-  hdr.size = hdr.part_offset = sizeof(header_type);
+  hdr.size = hdr.part_offset = sizeof(header_type)-SIGNBLOB_SIZE;
   hdr.num_parts = partnums;
 
   outfile = fopen (outname, "wb");
-  fwrite (&hdr, sizeof (header_type), 1, outfile);
+  if(bSignOffset)
+  {
+    fwrite (&hdr, sizeof (header_type), 1, outfile); 	//Write the new way (write the sign as part of the header)
+  }
+  else
+  {
+    fwrite (&hdr.magic, sizeof (header_type)-SIGNBLOB_SIZE, 1, outfile);	//Write the original way (ignore the new variable)
+  }
   printf ("Size: %d\n", hdr.size);
-  printf ("%d partitions starting at offset 0x%X\n", hdr.num_parts,
-	  hdr.part_offset);
+  printf ("%d partitions starting at offset 0x%X\n", hdr.num_parts, hdr.part_offset);
 
   parts = (part_type *)calloc (hdr.num_parts, sizeof (part_type));
   memset(parts, 0, sizeof(part_type)*hdr.num_parts);
-  int currentOffset = sizeof(header_type)+sizeof(part_type)*hdr.num_parts;
+  int currentOffset = hdr.part_offset+sizeof(part_type)*hdr.num_parts;
   printf("Offset: %d\n", currentOffset);
   for (i = 0; i < (int)hdr.num_parts; i++)
   {
