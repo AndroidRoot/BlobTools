@@ -8,15 +8,20 @@
 void dumpPartition (FILE * file, char *basename, part_type part);
 #define BUFFER_SIZE 2048
 
+int secure_offset;
+
 int
 main (int argc, char **argv)
 {
-  header_type hdr;
+  secure_header_type sec_hdr;
+  header_type *hdr;
   FILE *file;
   part_type *parts;
   int i;
-
-  memset (&hdr, 0, sizeof (header_type));
+  char magic_tag[21];
+  memset (&sec_hdr, 0, sizeof (secure_header_type));
+  hdr = &sec_hdr.real_header;
+  secure_offset=0;
 
   if (argc < 2)
     {
@@ -30,32 +35,32 @@ main (int argc, char **argv)
       fprintf (stderr, "Unable to open \"%s\"\n", argv[1]);
       return -1;
     }
-  fread (&hdr, sizeof (header_type), 1, file);
-  if (memcmp (hdr.magic, MAGIC, MAGIC_SIZE))
-    {
-      fprintf (stderr, "File \"%s\" is not a valid blob file\n", argv[1]);
-      return -1;
-    }
-  printf ("Header size: %d\n", hdr.size);
-  printf ("%d partitions starting at offset 0x%X\n", hdr.num_parts,
-	  hdr.part_offset);
-  printf ("Blob version: %d\n", hdr.version);
-  for(i=0; i<7; i++)
+
+   fread (magic_tag, SECURE_MAGIC_SIZE, 1, file);
+   if(!memcmp(magic_tag, SECURE_MAGIC, SECURE_MAGIC_SIZE))
+   {
+      fseek(file, 0 , SEEK_SET);
+      fread (&sec_hdr, sizeof (secure_header_type), 1, file);
+      secure_offset = SECURE_OFFSET;
+   } else if (!memcmp (magic_tag, MAGIC, MAGIC_SIZE))
+   {      
+      fseek(file, 0 , SEEK_SET);
+      fread (hdr, sizeof (header_type), 1, file);
+   } else
   {
-    printf ("Blob 'unknown' %d: %d\n", i, hdr.unknown[i]);
+	fprintf(stderr, "Unsupport blob file format\n");
+	exit(-1);
   }
+  printf ("Header size: %d\n", hdr->size);
+  printf ("%d partitions starting at offset 0x%X\n", hdr->num_parts,
+	  hdr->part_offset);
+  printf ("Blob version: %d\n", hdr->version);
   
-/*  snprintf (hdrfilename, 1024, "%s.HEADER", argv[1]);
-  hdrfile = fopen (hdrfilename, "wb");
-  fwrite (&hdr, sizeof (header_type), 1, hdrfile);
-  fclose (hdrfile);*/
+  fseek (file, secure_offset + hdr->part_offset, SEEK_SET);
+  parts = (part_type *)calloc (hdr->num_parts, sizeof (part_type));
+  fread (parts, sizeof (part_type), hdr->num_parts, file);
 
-
-  fseek (file, hdr.part_offset, SEEK_SET);
-  parts = (part_type *)calloc (hdr.num_parts, sizeof (part_type));
-  fread (parts, sizeof (part_type), hdr.num_parts, file);
-
-  for (i = 0; i < (int)hdr.num_parts; i++)
+  for (i = 0; i < (int)hdr->num_parts; i++)
     {
       printf ("Partition %d\n", i);
       printf ("Name: %s\n", parts[i].name);
@@ -70,15 +75,15 @@ main (int argc, char **argv)
 void
 dumpPartition (FILE * file, char *basename, part_type part)
 {
-  fseek (file, part.offset, SEEK_SET);
   int dataleft = part.size;
   char buffer[BUFFER_SIZE];
   char filename[1024];
   FILE *outfile;
   snprintf (filename, 1024, "%s.%s", basename, part.name);
   printf ("Writing file %s (%d bytes)\n", filename, part.size);
-  outfile = fopen (filename, "wb");
 
+  fseek (file, secure_offset + part.offset, SEEK_SET);
+  outfile = fopen (filename, "wb");
   while (dataleft > 0)
     {
       int toRead = dataleft > BUFFER_SIZE ? BUFFER_SIZE : dataleft;
