@@ -36,6 +36,7 @@ main (int argc, char **argv)
   part_type *parts;
   int i;
   char magic_tag[21];
+  char *blobname;
   memset (&sec_hdr, 0, sizeof (secure_header_type));
   hdr = &sec_hdr.real_header;
   secure_offset=0;
@@ -52,6 +53,12 @@ main (int argc, char **argv)
       fprintf (stderr, "Unable to open \"%s\"\n", argv[1]);
       return -1;
     }
+
+  blobname = strrchr(argv[1], '/');
+  if (blobname == NULL)
+      blobname = argv[1];
+  else
+      blobname++;
 
    fread (magic_tag, SECURE_MAGIC_SIZE, 1, file);
    if(!memcmp(magic_tag, SECURE_MAGIC, SECURE_MAGIC_SIZE))
@@ -83,7 +90,7 @@ main (int argc, char **argv)
       printf ("Name: %s\n", parts[i].name);
       printf ("Offset: %d (0x%X)\n", parts[i].offset, parts[i].offset);
       printf ("Size: %d (0x%X)\n", parts[i].size, parts[i].size);
-      dumpPartition (file, argv[1], parts[i]);
+      dumpPartition (file, blobname, parts[i]);
     }
   fclose (file);
   return 0;
