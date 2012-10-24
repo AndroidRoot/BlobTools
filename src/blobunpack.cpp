@@ -72,7 +72,7 @@ main (int argc, char **argv)
       fread (hdr, sizeof (header_type), 1, file);
    } else
   {
-	fprintf(stderr, "Unsupport blob file format\n");
+	fprintf(stderr, "Unsupported blob file format\n");
 	exit(-1);
   }
   printf ("Header size: %d\n", hdr->size);
